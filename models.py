@@ -9,7 +9,7 @@ class GA4QueryInput(BaseModel):
     metrics: List[str] = Field(..., description="GA4 metric names (e.g., ['sessions', 'pageviews', 'users'])")
     start_date: str = Field(..., description="Start date in YYYY-MM-DD format (e.g., '2025-06-09')")
     end_date: str = Field(..., description="End date in YYYY-MM-DD format (e.g., '2025-07-08')")
-    limit: Optional[int] = Field(default=100, description="Maximum number of rows to return (default: 100)")
+    limit: Optional[int] = Field(default=10000, description="Maximum number of rows to return (default: 100)")
     property_id: Optional[str] = Field(default=None, description="Override GA4 property ID if needed")
     
     filters: Optional[dict] = Field(default=None, description="Filter expressions for dimensions and metrics (GA4 API FilterExpression)")
