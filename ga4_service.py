@@ -73,14 +73,42 @@ async def get_ga4_data(input: GA4QueryInput) -> dict:
         
         # Build the request
         try:
+            # Handle granularity as a dimension if provided and not already in dimensions
+            dimensions = [Dimension(name=d) for d in input.dimensions]
+            if input.granularity and input.granularity not in input.dimensions:
+                # Map common granularity values to GA4 dimension names
+                granularity_map = {
+                    "daily": "date",
+                    "weekly": "week",
+                    "monthly": "month"
+                }
+                gran_dim = granularity_map.get(input.granularity.lower(), input.granularity)
+                if gran_dim not in [d.name for d in dimensions]:
+                    dimensions.append(Dimension(name=gran_dim))
+
+            # Prepare filters if provided
+            dimension_filter = None
+            metric_filter = None
+            if input.filters:
+                dimension_filter = input.filters.get('dimension_filter')
+                metric_filter = input.filters.get('metric_filter')
+
+            # Prepare order_bys if provided
+            order_bys = input.order_by if input.order_by else None
+
             request = RunReportRequest(
                 property=f"properties/{property_id}",
-                dimensions=[Dimension(name=d) for d in input.dimensions],
+                dimensions=dimensions,
                 metrics=[Metric(name=m) for m in input.metrics],
                 date_ranges=[DateRange(start_date=input.start_date, end_date=input.end_date)],
-                limit=input.limit
+                limit=input.limit,
+                currency_code=input.currency_code if input.currency_code else None,
+                keep_empty_rows=input.include_empty_rows if input.include_empty_rows is not None else None,
+                dimension_filter=dimension_filter,
+                metric_filter=metric_filter,
+                order_bys=order_bys
             )
-            logger.info(f"Built request - Property: {property_id}, Dimensions: {input.dimensions}, Metrics: {input.metrics}")
+            logger.info(f"Built request - Property: {property_id}, Dimensions: {[d.name for d in dimensions]}, Metrics: {input.metrics}, Filters: {input.filters}, Order By: {input.order_by}, Currency: {input.currency_code}, Granularity: {input.granularity}, Include Empty Rows: {input.include_empty_rows}")
         except Exception as e:
             logger.error(f"Failed to build request: {str(e)}")
             return {

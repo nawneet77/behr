@@ -11,6 +11,12 @@ class GA4QueryInput(BaseModel):
     end_date: str = Field(..., description="End date in YYYY-MM-DD format (e.g., '2025-07-08')")
     limit: Optional[int] = Field(default=100, description="Maximum number of rows to return (default: 100)")
     property_id: Optional[str] = Field(default=None, description="Override GA4 property ID if needed")
+    
+    filters: Optional[dict] = Field(default=None, description="Filter expressions for dimensions and metrics (GA4 API FilterExpression)")
+    order_by: Optional[List[dict]] = Field(default=None, description="List of order by clauses (GA4 API OrderBy objects)")
+    currency_code: Optional[str] = Field(default=None, description="Currency code for monetary metrics (e.g., 'USD')")
+    granularity: Optional[str] = Field(default="daily", description="Granularity for date-based queries (e.g., 'daily', 'weekly', 'monthly')")
+    include_empty_rows: Optional[bool] = Field(default=False, description="Whether to include rows with zero values")
 
     @validator('start_date', 'end_date')
     def validate_date_format(cls, v):
