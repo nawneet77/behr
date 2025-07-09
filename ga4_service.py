@@ -113,7 +113,15 @@ async def get_ga4_data(input: GA4QueryInput) -> dict:
             metric_filter = None
             if input.filters:
                 try:
-                    dimension_filter = parse_simple_filters(input.filters)
+                    # If the filter dict looks like a full FilterExpression, use it directly
+                    filter_keys = set(input.filters.keys())
+                    filter_expr_keys = {"dimension_filter", "and_group", "or_group", "not_expression", "filter"}
+                    if filter_keys & filter_expr_keys:
+                        # Use the dict as a FilterExpression (assume user provided correct structure)
+                        dimension_filter = input.filters if "dimension_filter" not in input.filters else input.filters["dimension_filter"]
+                    else:
+                        # Use the simple key-value parser
+                        dimension_filter = parse_simple_filters(input.filters)
                 except Exception as e:
                     logger.error(f"Failed to parse filters: {str(e)}")
                     return {
