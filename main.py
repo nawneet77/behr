@@ -2,6 +2,12 @@ from fastmcp import FastMCP
 from models import GA4QueryInput, BasicQueryInput
 from ga4_service import get_ga4_data, list_ga4_dimensions, list_ga4_metrics
 from utils import get_date_suggestions
+import logging
+import traceback
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Initialize MCP Server
 mcp = FastMCP("GA4 Analytics MCP Server")
@@ -37,7 +43,28 @@ async def query_ga4_data(input: GA4QueryInput) -> dict:
     - For traffic by country: dimensions=["country"], metrics=["users", "sessions"]
     - For page performance: dimensions=["pagePath"], metrics=["pageviews", "users"]
     """
-    return await get_ga4_data(input)
+    try:
+        logger.info(f"Querying GA4 data for user: {input.user_id}")
+        logger.info(f"Dimensions: {input.dimensions}, Metrics: {input.metrics}")
+        logger.info(f"Date range: {input.start_date} to {input.end_date}")
+        
+        result = await get_ga4_data(input)
+        
+        logger.info(f"Query result success: {result.get('success', False)}")
+        if not result.get('success', False):
+            logger.error(f"Query failed: {result.get('error', 'Unknown error')}")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error in query_ga4_data: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return {
+            "success": False,
+            "error": f"Tool execution error: {str(e)}",
+            "data": [],
+            "rowCount": 0
+        }
 
 @mcp.tool()
 async def get_available_dimensions(input: BasicQueryInput) -> dict:
@@ -49,7 +76,19 @@ async def get_available_dimensions(input: BasicQueryInput) -> dict:
     
     Use this when you need to know what dimensions you can use in your queries.
     """
-    return await list_ga4_dimensions(input)
+    try:
+        logger.info(f"Getting available dimensions for user: {input.user_id}")
+        result = await list_ga4_dimensions(input)
+        logger.info(f"Dimensions query success: {result.get('success', False)}")
+        return result
+    except Exception as e:
+        logger.error(f"Error in get_available_dimensions: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Tool execution error: {str(e)}",
+            "dimensions": [],
+            "count": 0
+        }
 
 @mcp.tool()
 async def get_available_metrics(input: BasicQueryInput) -> dict:
@@ -61,7 +100,19 @@ async def get_available_metrics(input: BasicQueryInput) -> dict:
     
     Use this when you need to know what metrics you can use in your queries.
     """
-    return await list_ga4_metrics(input)
+    try:
+        logger.info(f"Getting available metrics for user: {input.user_id}")
+        result = await list_ga4_metrics(input)
+        logger.info(f"Metrics query success: {result.get('success', False)}")
+        return result
+    except Exception as e:
+        logger.error(f"Error in get_available_metrics: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Tool execution error: {str(e)}",
+            "metrics": [],
+            "count": 0
+        }
 
 @mcp.tool()
 async def get_common_date_ranges() -> dict:
@@ -71,7 +122,19 @@ async def get_common_date_ranges() -> dict:
     This provides pre-calculated date ranges that are commonly used in analytics.
     Use this to help convert relative date expressions into specific dates.
     """
-    return get_date_suggestions()
+    try:
+        logger.info("Getting common date ranges")
+        result = get_date_suggestions()
+        logger.info("Date ranges retrieved successfully")
+        return result
+    except Exception as e:
+        logger.error(f"Error in get_common_date_ranges: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Tool execution error: {str(e)}",
+            "dateRanges": {},
+            "currentDate": None
+        }
 
 if __name__ == "__main__":
     print("Starting GA4 MCP Server for N8N AI Agent...")
