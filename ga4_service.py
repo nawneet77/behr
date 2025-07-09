@@ -1,5 +1,5 @@
-from google.analytics.data_v1beta import BetaAnalyticsDataClient
-from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Dimension, Metric, GetMetadataRequest
+from google.analytics.data_v1beta import BetaAnalyticsDataClient 
+from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Dimension, Metric, GetMetadataRequest, FilterExpression, Filter
 from models import GA4QueryInput, BasicQueryInput
 from database import get_user_credentials
 from auth import always_refresh_user_tokens
@@ -8,6 +8,28 @@ import traceback
 
 logger = logging.getLogger(__name__)
 
+def parse_simple_filters(filter_dict: dict) -> FilterExpression:
+    """
+    Converts a dict like {"field_name": "value"} to a GA4 AND-group FilterExpression
+    """
+    expressions = []
+    for key, value in filter_dict.items():
+        expressions.append(
+            FilterExpression(
+                filter=Filter(
+                    field_name=key,
+                    string_filter=Filter.StringFilter(value=value)
+                )
+            )
+        )
+    
+    if len(expressions) == 1:
+        return expressions[0]
+    
+    return FilterExpression(
+        and_group={"expressions": expressions}
+    )
+    
 async def get_ga4_data(input: GA4QueryInput) -> dict:
     """
     Query Google Analytics 4 data with specific dimensions and metrics.
@@ -90,8 +112,16 @@ async def get_ga4_data(input: GA4QueryInput) -> dict:
             dimension_filter = None
             metric_filter = None
             if input.filters:
-                dimension_filter = input.filters.get('dimension_filter')
-                metric_filter = input.filters.get('metric_filter')
+                try:
+                    dimension_filter = parse_simple_filters(input.filters)
+                except Exception as e:
+                    logger.error(f"Failed to parse filters: {str(e)}")
+                    return {
+                        "success": False,
+                        "error": f"Invalid filters format: {str(e)}",
+                        "data": [],
+                        "rowCount": 0
+                    }
 
             # Prepare order_bys if provided
             order_bys = input.order_by if input.order_by else None
